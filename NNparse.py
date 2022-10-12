@@ -17,26 +17,35 @@ import torch
 import torch.fx
 from torch.fx.node import Node
 
-#parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass 
-def parseNetworkIn(net):
+#parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass
+def parseNet(m):
     opHash={}
     opTypes=[]
-    graphedModel = torch.fx.symbolic_trace(net)
+    #grab modules
+    graphedModel = torch.fx.symbolic_trace(m)
     modules=graphedModel._modules
-    for module in modules:
-        inner_mod=modules[module]._modules
-        for i in inner_mod:
-            operation=inner_mod[i]
-            otype=type(operation)
-            if otype in opHash:
-                opHash[otype].append(operation)
+
+    opStack=[]
+    opStack.append(modules)
+
+
+    while len(opStack)!=0:
+        mods=opStack.pop()
+        if type(mods)==torch.nn.modules.module.Module:
+            mods=mods._modules
+        for i in mods:
+            otype=type(mods[i])
+            #check if it is a one layer module
+            if otype==torch.nn.modules.module.Module:
+                opStack.append(mods[i])
             else:
-                opHash[otype]=[]
-                opTypes.append(otype)
-                opHash[otype].append(operation)
-    return opHash,opTypes
-
-
+                if otype in opHash:
+                    opHash[otype].append(mods[i])
+                else:
+                    opHash[otype]=[]
+                    opTypes.append(otype)
+                    opHash[otype].append(mods[i])
+    return opHash
 
 def operationTraverse(pred):
     operation_stack=[]
