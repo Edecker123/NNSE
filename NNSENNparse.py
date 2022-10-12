@@ -17,12 +17,10 @@ import torch
 import torch.fx
 from torch.fx.node import Node
 
-
 #parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass 
 def parseNetworkIn(net):
     opHash={}
     opTypes=[]
-
     graphedModel = torch.fx.symbolic_trace(net)
     modules=graphedModel._modules
     for module in modules:
@@ -38,22 +36,17 @@ def parseNetworkIn(net):
                 opHash[otype].append(operation)
     return opHash,opTypes
 
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super(NeuralNetwork, self).__init__()
-        self.flatten=nn.Flatten() #this will take the image and flatten it into a vector of pixels 
-        self.linear_relu_stack=nn.Sequential(
-            nn.Linear(28*28, 64), #this applies a linear transformation on the vectors with the indices as weights and biasses
-            nn.ReLU(), #this is our activation
-            nn.Linear(64,10),
-            nn.ReLU()
-        )
-    
-    def forward(self, x):
-        x=self.flatten(x)
-        logits=self.linear_relu_stack(x)
-        return logits
+def operationTraverse(pred):
+    operation_stack=[]
+    operation_stack.append(pred.grad_fn)
+    while(len(operation_stack)!=0):
+        operation=operation_stack.pop()
+        if type(operation) is tuple:
+            operation=operation[0]
+        if operation==None:
+            continue
+        for i in operation.next_functions:
+            operation_stack.append(i)
+            print(i)
 
-m=NeuralNetwork()
-print(parseNetworkIn(m))
 
