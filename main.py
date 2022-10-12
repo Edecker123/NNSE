@@ -16,13 +16,13 @@ import tabulate
 import torch
 import torch.fx
 from torch.fx.node import Node
-
+import collections
 from typing import Dict
-import PyTorch_CIFAR10.cifar10_models.googlenet as vgg
+import PyTorch_CIFAR10.cifar10_models.vgg as vgg
 from NNSENNparse import  parseNetworkIn
 f=[]
 mod=[]
-m=vgg.GoogLeNet()
+m=vgg.vgg11_bn()
 g=torch.fx.symbolic_trace(m)
 for i in g.graph.nodes:
     if i.op=='call_module':
@@ -30,15 +30,34 @@ for i in g.graph.nodes:
     elif i.op=='call_function':
         f.append(i)
 
-print(type(g._modules))
-for i in g._modules:
-    x=g._modules[i]._modules
-    # print(type(g._modules[i]))
-    for l in x:
-        k=x[l]._modules
-        if type(x[l])!=torch.nn.modules.module.Module:
-            print(type(x[l]))
-        for p in k:
-            z=k[p]._modules
-            # if type(k[p])!='<class torch.nn.modules.module.Module>':
-            #     print(type(k[p]))
+opHash={}
+opTypes=[]
+#grab modules
+graphedModel = torch.fx.symbolic_trace(m)
+modules=graphedModel._modules
+
+opStack=[]
+opStack.append(modules)
+
+
+while len(opStack)!=0:
+    mods=opStack.pop()
+    if type(mods)==torch.nn.modules.module.Module:
+        mods=mods._modules
+    for i in mods:
+        otype=type(mods[i])
+        #check if it is a one layer module
+        if otype==torch.nn.modules.module.Module:
+            opStack.append(mods[i])
+        else:
+            if otype in opHash:
+                opHash[otype].append(mods[i])
+            else:
+                opHash[otype]=[]
+                opTypes.append(otype)
+                opHash[otype].append(mods[i])
+
+op=opHash[torch.nn.modules.pooling.MaxPool2d][0]
+
+for i in opTypes:
+    print(i)

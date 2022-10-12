@@ -36,6 +36,8 @@ def parseNetworkIn(net):
                 opHash[otype].append(operation)
     return opHash,opTypes
 
+
+
 def operationTraverse(pred):
     operation_stack=[]
     operation_stack.append(pred.grad_fn)
