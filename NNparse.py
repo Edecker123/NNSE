@@ -61,3 +61,33 @@ def operationTraverse(pred):
             print(i)
 
 
+def oParse(net):
+    m=torch.fx.symbolic_trace(net)
+    #first we grab a container of the modules (these are in order )
+    #check if first element can be broken down, if not append then pop, else front append
+    modules=[]
+    oParse={}
+    count=0
+    for i in m._modules:
+        modules.append(m._modules[i])
+    #start with a stack of modules in order 
+    while len(modules)!=0:
+        #first we pop off the front element 
+        mod=modules.pop(0)
+        # print(type(mod))
+        #if its breakable then the type will tell 
+        #if breakable append and loop 
+        #else keep popped 
+        if len(mod._modules)>0:
+            inter=mod._modules
+            catlist=[]
+            #now we make a list to append to 
+            for i in inter:
+                catlist.append(mod._modules[i])
+            #push the broken modules back to the front 
+            modules=catlist+modules
+        else:
+            #this means it is a actual module and we append it to our output list
+            oParse[count]=mod
+            count+=1
+    return oParse
