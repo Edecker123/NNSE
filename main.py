@@ -6,10 +6,10 @@ import torch.fx
 from torch.fx.node import Node
 import collections
 from typing import Dict
-import PyTorch_CIFAR10.cifar10_models.resnet as vgg
+import PyTorch_CIFAR10.cifar10_models.mobilenetv2 as vgg
 from NNparse import targetLook, Node,loadArgs, loadKwargs, parseNet
 
-m=vgg.resnet50()
+m=vgg.MobileNetV2
 x=torch.ones(3,3,224,224)
 m(x)
 
@@ -17,11 +17,9 @@ m(x)
 d=parseNet(m,x)
 
 for i in d:
-    if type(d[i].result)!=int:
-        print(d[i].result.shape)
-        o=(d[i].operation)
-        if o==None:
-            print(i)
+    print(d[i].operation)
+
+
 
 
 

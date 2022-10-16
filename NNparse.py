@@ -160,6 +160,12 @@ def loadArgs(node,graph):
         if type(i)==torch.fx.node.Node:
             N=graph[i.name]
             argsR.append(N.result)
+        elif type(i)==torch.fx.immutable_collections.immutable_list:
+            a=[]
+            for j in i:
+                if type(j)==torch.fx.node.Node:
+                    a.append(graph[j.name].result)
+            argsR.append(a)
         else:
             argsR.append(i)
     return tuple(argsR)
@@ -173,6 +179,12 @@ def loadKwargs(node, graph):
         if type(i)==torch.fx.node.Node:
             N=graph[i.name]
             kwargsR.append(N.result)
+        elif type(i)==torch.fx.immutable_collections.immutable_list:
+            a=[]
+            for j in i:
+                if type(j)==torch.fx.node.Node:
+                    a.append(graph[j.name].result)
+            kwargsR.append(a)
         else:
             kwargsR.append(i)
     return tuple(kwargsR)
