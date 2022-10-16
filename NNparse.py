@@ -17,6 +17,51 @@ import torch
 import torch.fx
 from torch.fx.node import Node
 
+def fetch_attr(target):
+    target_atoms = target.split('.')
+    for i, atom in enumerate(target_atoms):
+        if not hasattr(attr_itr, atom):
+            raise RuntimeError(f"Node referenced nonexistant target {'.'.join(target_atoms[:i])}")
+        attr_itr = getattr(attr_itr, atom)
+    return attr_itr
+
+def parseNet(net,inp):
+    graph={}
+    trace=torch.fx.symbolic_trace(net)
+    mods=trace._modules
+    Ngraph=trace.graph
+    nodes=Ngraph.nodes
+    for node in nodes:
+        if node.op=="placeholder":
+            N=Node(None, node.name, None,inp,node.op, None)
+            graph[node.name]=N
+        elif node.op=="call_module":
+            operation=targetLook(node.target,mods)
+            args=loadArgs(node,graph)
+            kwargs=loadKwargs(node, graph)
+            result=operation(*args, *kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs)
+            graph[node.name]=N
+        elif node.op=="call_function":
+            operation=node.target
+            args=loadArgs(node,graph)
+            kwargs=loadKwargs(node, graph)
+            result=operation(*args, *kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs)
+            graph[node.name]=N
+        elif node.op=="call_method":
+            operation=node.target
+            obj,*args=loadArgs(node,graph)
+            kwargs=loadKwargs(node, graph)
+            result=getattr(obj, operation)(*args, *kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs)
+            graph[node.name]=N
+        elif node.op=="get_attr":
+            result = fetch_attr(node.target)
+            N=Node(args, node.name,operation, result, node.op, kwargs)
+            graph[node.name]=N
+    return graph
+
 #parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass
 def parseNetMods(m):
     opHash={}
@@ -118,11 +163,25 @@ def loadArgs(node,graph):
         else:
             argsR.append(i)
     return tuple(argsR)
+
+def loadKwargs(node, graph):
+    #first we grab the args
+    kwargs=node.kwargs
+    kwargsR=[]
+    #next we look them up 
+    for i in kwargs:
+        if type(i)==torch.fx.node.Node:
+            N=graph[i.name]
+            kwargsR.append(N.result)
+        else:
+            kwargsR.append(i)
+    return tuple(kwargsR)
 class Node():
-    def __init__(self, inputs, name, operation,result,nodeop):
+    def __init__(self, inputs, name, operation,result,nodeop, kwargs):
         self.operation=operation
         self.inputs=inputs
         self.result=result
         self.name=name
         self.nodeop=nodeop
+        self.kwargs=kwargs
 
