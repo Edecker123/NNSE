@@ -18,7 +18,7 @@ import torch.fx
 from torch.fx.node import Node
 
 #parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass
-def parseNet(m):
+def parseNetMods(m):
     opHash={}
     opTypes=[]
     #grab modules
@@ -61,7 +61,7 @@ def operationTraverse(pred):
             print(i)
 
 
-def oParse(net):
+def oParseMods(net):
     m=torch.fx.symbolic_trace(net)
     #first we grab a container of the modules (these are in order )
     #check if first element can be broken down, if not append then pop, else front append
@@ -70,10 +70,12 @@ def oParse(net):
     count=0
     for i in m._modules:
         modules.append(m._modules[i])
+        print(i)
     #start with a stack of modules in order 
     while len(modules)!=0:
         #first we pop off the front element 
         mod=modules.pop(0)
+        print(mod)
         # print(type(mod))
         #if its breakable then the type will tell 
         #if breakable append and loop 
@@ -91,3 +93,36 @@ def oParse(net):
             oParse[count]=mod
             count+=1
     return oParse
+
+def targetLook(target, mods):
+    atoms=target.split('.')
+    op=None
+    while len(atoms)!=0:
+        key=atoms.pop(0)
+        inter=mods[key]
+        if len(atoms)!=0:
+            mods=inter._modules
+        else:
+            op=inter
+            return op
+
+def loadArgs(node,graph):
+    #first we grab the args
+    args=node.args
+    argsR=[]
+    #next we look them up 
+    for i in args:
+        if type(i)==torch.fx.node.Node:
+            N=graph[i.name]
+            argsR.append(N.result)
+        else:
+            argsR.append(i)
+    return tuple(argsR)
+class Node():
+    def __init__(self, inputs, name, operation,result,nodeop):
+        self.operation=operation
+        self.inputs=inputs
+        self.result=result
+        self.name=name
+        self.nodeop=nodeop
+
