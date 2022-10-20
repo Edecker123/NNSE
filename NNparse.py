@@ -45,6 +45,7 @@ def parseNet(net,inp):
         elif node.op=="call_function":
             operation=node.target
             args=loadArgs(node,graph)
+            print(args)
             kwargs=loadKwargs(node, graph)
             result=operation(*args, *kwargs)
             N=Node(args, node.name,operation, result, node.op, kwargs)
@@ -185,6 +186,8 @@ def loadKwargs(node, graph):
                 if type(j)==torch.fx.node.Node:
                     a.append(graph[j.name].result)
             kwargsR.append(a)
+        elif type(i)==str:
+            kwargsR.append(kwargs[i])
         else:
             kwargsR.append(i)
     return tuple(kwargsR)
