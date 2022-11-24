@@ -33,33 +33,32 @@ def parseNet(net,inp):
     nodes=Ngraph.nodes
     for node in nodes:
         if node.op=="placeholder":
-            N=Node(None, node.name, None,inp,node.op, None)
+            N=Node(None, node.name, None,inp,node.op, None, None)
             graph[node.name]=N
         elif node.op=="call_module":
             operation=targetLook(node.target,mods)
             args=loadArgs(node,graph)
             kwargs=loadKwargs(node, graph)
             result=operation(*args, *kwargs)
-            N=Node(args, node.name,operation, result, node.op, kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs, node.prev.name)
             graph[node.name]=N
         elif node.op=="call_function":
             operation=node.target
             args=loadArgs(node,graph)
-            print(args)
             kwargs=loadKwargs(node, graph)
             result=operation(*args, *kwargs)
-            N=Node(args, node.name,operation, result, node.op, kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
         elif node.op=="call_method":
             operation=node.target
             obj,*args=loadArgs(node,graph)
             kwargs=loadKwargs(node, graph)
             result=getattr(obj, operation)(*args, *kwargs)
-            N=Node(args, node.name,operation, result, node.op, kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
         elif node.op=="get_attr":
             result = fetch_attr(node.target)
-            N=Node(args, node.name,operation, result, node.op, kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
     return graph
 
@@ -192,11 +191,20 @@ def loadKwargs(node, graph):
             kwargsR.append(i)
     return tuple(kwargsR)
 class Node():
-    def __init__(self, inputs, name, operation,result,nodeop, kwargs):
+    def __init__(self, inputs, name, operation,result,nodeop, kwargs, prev):
         self.operation=operation
         self.inputs=inputs
         self.result=result
         self.name=name
         self.nodeop=nodeop
         self.kwargs=kwargs
+        self.prev=prev
+def getOps(netGraph):
+    op={}
+    for i in netGraph:
+        if netGraph[i].operation in op:
+            op[netGraph[i].operation]+=1
+        else:
+            op[netGraph[i].operation]=1
+    return op
 
