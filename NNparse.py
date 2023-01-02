@@ -30,6 +30,7 @@ def parseNet(net,inp):
     trace=torch.fx.symbolic_trace(net)
     mods=trace._modules
     Ngraph=trace.graph
+    # print(Ngraph)
     nodes=Ngraph.nodes
     for node in nodes:
         if node.op=="placeholder":
