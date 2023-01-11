@@ -16,6 +16,7 @@ import tabulate
 import torch
 import torch.fx
 from torch.fx.node import Node
+import torchvision.models.resnet as res
 
 def fetch_attr(target):
     target_atoms = target.split('.')
@@ -30,9 +31,9 @@ def parseNet(net,inp):
     trace=torch.fx.symbolic_trace(net)
     mods=trace._modules
     Ngraph=trace.graph
-    # print(Ngraph)
     nodes=Ngraph.nodes
     for node in nodes:
+
         if node.op=="placeholder":
             N=Node(None, node.name, None,inp,node.op, None, None)
             graph[node.name]=N
@@ -41,13 +42,16 @@ def parseNet(net,inp):
             args=loadArgs(node,graph)
             kwargs=loadKwargs(node, graph)
             result=operation(*args, *kwargs)
+
             N=Node(args, node.name,operation, result, node.op, kwargs, node.prev.name)
             graph[node.name]=N
         elif node.op=="call_function":
             operation=node.target
+
             args=loadArgs(node,graph)
             kwargs=loadKwargs(node, graph)
             result=operation(*args, *kwargs)
+         
             N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
         elif node.op=="call_method":
@@ -61,6 +65,7 @@ def parseNet(net,inp):
             result = fetch_attr(node.target)
             N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
+        
     return graph
 
 #parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass
