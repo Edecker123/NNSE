@@ -33,10 +33,11 @@ def parseNet(net,inp):
     Ngraph=trace.graph
     nodes=Ngraph.nodes
     for node in nodes:
-
+        print(node.args)
         if node.op=="placeholder":
             N=Node(None, node.name, None,inp,node.op, None, None)
             graph[node.name]=N
+            graph[node.name].argnodes=node.args
         elif node.op=="call_module":
             operation=targetLook(node.target,mods)
             args=loadArgs(node,graph)
@@ -45,6 +46,7 @@ def parseNet(net,inp):
 
             N=Node(args, node.name,operation, result, node.op, kwargs, node.prev.name)
             graph[node.name]=N
+            graph[node.name].argnodes=node.args
         elif node.op=="call_function":
             operation=node.target
 
@@ -54,6 +56,7 @@ def parseNet(net,inp):
          
             N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
+            graph[node.name].argnodes=node.args
         elif node.op=="call_method":
             operation=node.target
             obj,*args=loadArgs(node,graph)
@@ -61,11 +64,12 @@ def parseNet(net,inp):
             result=getattr(obj, operation)(*args, *kwargs)
             N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
+            graph[node.name].argnodes=node.args
         elif node.op=="get_attr":
             result = fetch_attr(node.target)
             N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
-        
+            graph[node.name].argnodes=node.args
     return graph
 
 #parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass
@@ -197,7 +201,7 @@ def loadKwargs(node, graph):
             kwargsR.append(i)
     return tuple(kwargsR)
 class Node():
-    def __init__(self, inputs, name, operation,result,nodeop, kwargs, prev):
+    def __init__(self, inputs, name, operation,result,nodeop, kwargs, prev,argnodes=None):
         self.operation=operation
         self.inputs=inputs
         self.result=result
@@ -205,6 +209,7 @@ class Node():
         self.nodeop=nodeop
         self.kwargs=kwargs
         self.prev=prev
+        self.argnodes=argnodes
 def getOps(netGraph):
     op={}
     for i in netGraph:

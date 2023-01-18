@@ -19,17 +19,22 @@ from torch import autograd
 import os
 from Fcount import NNSE
 import time
-import torchvision.models.resnet as res
+
 import torchvision.models.googlenet as goog
 m=mlp.MLP()
 v=vgg.vgg19_bn(False)
 g=goog()
 
 device=torch.device('mps')
+
+import torchvision.models.resnet as res
 x=torch.zeros(1,3,224,224)
 
 
-print(NNSE(g, x))
+d=parseNet(goog(),x)
+drev=[]
+for i in d: 
+    drev.insert(0, d[i])
 
-
-
+for i in drev: 
+    print(d[i.name].argnodes)
