@@ -33,7 +33,6 @@ def parseNet(net,inp):
     Ngraph=trace.graph
     nodes=Ngraph.nodes
     for node in nodes:
-        print(node.args)
         if node.op=="placeholder":
             N=Node(None, node.name, None,inp,node.op, None, None)
             graph[node.name]=N

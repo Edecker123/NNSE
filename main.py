@@ -1,4 +1,4 @@
-from turtle import Shape
+
 import torch #first we import the library 
 import tabulate
 import torch
@@ -19,6 +19,7 @@ from torch import autograd
 import os
 from Fcount import NNSE
 import time
+from NNtreegeneration import genAdjList, adjToNodes, dagConnect
 
 import torchvision.models.googlenet as goog
 m=mlp.MLP()
@@ -31,10 +32,9 @@ import torchvision.models.resnet as res
 x=torch.zeros(1,3,224,224)
 
 
-d=parseNet(goog(),x)
-drev=[]
-for i in d: 
-    drev.insert(0, d[i])
+d=parseNet(res.resnet18(),x)
 
-for i in drev: 
-    print(d[i.name].argnodes)
+
+p=genAdjList(d)
+k=dagConnect(p)
+
