@@ -24,6 +24,7 @@ class jacNode():
         self.inp=inp
         self.func=func
         self.child=[]
+        self.vis=False
     
     def addChild(self, child):
         self.child.append(child)
@@ -64,18 +65,21 @@ def dagConnect(Adj):
     
     return element
 
-def traverse(node,Adj):
-    print(node)
-    if len(node.child)==0 :
+def traverse(node,Adj,arr):
+    arr.append(node)
+    if len(Adj[node])==0 :
+        print(arr)
+        arr=[]
         return None
-    else: 
-        return traverse(node, Adj)
     
+    else: 
+        for i in Adj[node]:
+            traverse(i.inp.name, Adj,arr)
     
 
-def pathFinder(Adj,k):
-    dagConnect(Adj)
+def pathFinder(Adj):
+    k=dagConnect(Adj)
     #step 1 is grab root 
-    traverse(k)
+    traverse(k, Adj,[]) #this will grab the children
     
     

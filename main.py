@@ -19,7 +19,7 @@ from torch import autograd
 import os
 from Fcount import NNSE
 import time
-from NNtreegeneration import genAdjList, adjToNodes, dagConnect
+from NNtreegeneration import genAdjList, pathFinder
 
 import torchvision.models.googlenet as goog
 m=mlp.MLP()
@@ -32,9 +32,8 @@ import torchvision.models.resnet as res
 x=torch.zeros(1,3,224,224)
 
 
-d=parseNet(res.resnet18(),x)
+d=parseNet(vgg.vgg11_bn(),x)
 
 
 p=genAdjList(d)
-k=dagConnect(p)
-
+pathFinder(p)
