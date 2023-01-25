@@ -28,19 +28,19 @@ v=vgg.vgg19_bn(False)
 g=goog()
 a=alex()
 device=torch.device('mps')
-r=res.resnet18()
+r=res.resnet34()
 import torchvision.models.resnet as res
 x=torch.zeros(1,3,224,224)
 
 
-d=parseNet(v,x)
+d=parseNet(g,x)
 
-
+print(g(x))
 p=genAdjList(d)
 k=dagConnect(p,d)
 # for i in p:
 #     for j in p[i]:
 #         print(j.child)
-paths=pathFinder(p,k,d,False)
+paths=pathFinder(p,k,d,True)
 print(paths , "TFLOPs")
 

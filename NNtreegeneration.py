@@ -94,7 +94,6 @@ def Traverse(node,Adj,path,paths,count,NN,flops,filt):
         if filt:
             if (NN[node.name[0]].nodeop=="call_module" and NN[node.name[1].name].nodeop=="call_module") or (NN[node.name[1].name].nodeop=="placeholder"):
                 if type(NN[node.name[0]].operation)!=torch.nn.modules.activation.ReLU and type(NN[node.name[1].name].operation)!=torch.nn.modules.activation.ReLU:
-                    print(node.name)
                     flops[0]+= GEMMflops(path[-1],dimensions)
         else:
             if (NN[node.name[0]].nodeop!="call_method" and NN[node.name[1].name].nodeop!="call_method") or (NN[node.name[1].name].nodeop=="placeholder"):
@@ -108,7 +107,7 @@ def Traverse(node,Adj,path,paths,count,NN,flops,filt):
             Traverse(i,Adj,path,paths,count,NN,flops,filt)
         path.pop()
     if len(Adj[node.name[1].name])==0:
-        paths[count[0]]=[]
+        paths[count[0]]=[flops[0]]
         for i in path:
             paths[count[0]].append(i)
         paths[count[0]].append(node.name)
@@ -121,5 +120,5 @@ def pathFinder(Adj, k,NN,filt):
     flops=[0]
     for i in Adj[k]:
         Traverse(i, Adj,path,paths,count,NN,flops,filt)
-    return flops[0]/1000000000000000 #dividing for teraflops 
+    return paths[0][0]/1000000000000 #dividing for teraflops 
 
