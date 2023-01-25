@@ -56,14 +56,14 @@ def parseNet(net,inp):
             N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
             graph[node.name]=N
             graph[node.name].argnodes=node.args
-        # elif node.op=="call_method":
-        #     operation=node.target
-        #     obj,*args=loadArgs(node,graph)
-        #     kwargs=loadKwargs(node, graph)
-        #     result=getattr(obj, operation)(*args, *kwargs)
-        #     N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
-        #     graph[node.name]=N
-        #     graph[node.name].argnodes=node.args
+        elif node.op=="call_method":
+            operation=node.target
+            obj,*args=loadArgs(node,graph)
+            kwargs=loadKwargs(node, graph)
+            result=getattr(obj, operation)(*args, *kwargs)
+            N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
+            graph[node.name]=N
+            graph[node.name].argnodes=node.args
         elif node.op=="get_attr":
             result = fetch_attr(node.target)
             N=Node(args, node.name,operation, result, node.op, kwargs,node.prev.name)
@@ -73,6 +73,7 @@ def parseNet(net,inp):
             N=Node(node.args,node.name, None, net(inp),node.op,None,node.prev.name)
             graph[node.name]=N
             graph[node.name].argnodes=node.args
+
     return graph
 
 #parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass

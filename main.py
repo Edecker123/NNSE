@@ -33,14 +33,14 @@ import torchvision.models.resnet as res
 x=torch.zeros(1,3,224,224)
 
 
-d=parseNet(r,x)
+d=parseNet(v,x)
 
-print(r(x).shape)
+
 p=genAdjList(d)
 k=dagConnect(p,d)
 # for i in p:
 #     for j in p[i]:
 #         print(j.child)
-paths=pathFinder(p,k,d)
-print(paths)
+paths=pathFinder(p,k,d,False)
+print(paths , "TFLOPs")
 

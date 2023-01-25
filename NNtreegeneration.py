@@ -48,15 +48,18 @@ def sizeofJac(NN, nodename):
 
 def genAdjList(NN): #assume that NN is the hashmap gained from parseNet assume it is reversed
     adjL={}
-    for i in NN: 
-        if i in adjL:
+    for vertex in NN: 
+        if vertex in adjL:
             continue
         else: 
-            adjL[i]=[]
-            for j in NN[i].argnodes:
+            if type(NN[vertex].result)==int:
+                continue
+            adjL[vertex]=[]
+            for parentv in NN[vertex].argnodes:
                 try:
-                    if j.name in NN:
-                        adjL[i].append(j)
+                    if parentv.name in NN:
+                        if type(NN[parentv.name].result)!=int:
+                            adjL[vertex].append(parentv)
                 except:
                     continue
                 
@@ -85,20 +88,24 @@ def dagConnect(Adj,NN):
     return element
 
 
-def Traverse(node,Adj,path,paths,count,NN,flops):
+def Traverse(node,Adj,path,paths,count,NN,flops,filt):
     dimensions=sizeofJac(NN,node.name)
     if len(path)>=1:
-        print(dimensions,path[-1])
-        flops[0]+= GEMMflops(path[-1],dimensions)
+        if filt:
+            if (NN[node.name[0]].nodeop=="call_module" and NN[node.name[1].name].nodeop=="call_module") or (NN[node.name[1].name].nodeop=="placeholder"):
+                if type(NN[node.name[0]].operation)!=torch.nn.modules.activation.ReLU and type(NN[node.name[1].name].operation)!=torch.nn.modules.activation.ReLU:
+                    print(node.name)
+                    flops[0]+= GEMMflops(path[-1],dimensions)
+        else:
+            if (NN[node.name[0]].nodeop!="call_method" and NN[node.name[1].name].nodeop!="call_method") or (NN[node.name[1].name].nodeop=="placeholder"):
+                flops[0]+= GEMMflops(path[-1],dimensions)
         path.append([dimensions[0],path[-1][1]])
     else: 
         path.append(dimensions)
 
     if len(node.name)==2: 
         for i in Adj[node.name[1].name]:
-            if i.visited==False:
-                i.visited==True
-                Traverse(i,Adj,path,paths,count,NN,flops)
+            Traverse(i,Adj,path,paths,count,NN,flops,filt)
         path.pop()
     if len(Adj[node.name[1].name])==0:
         paths[count[0]]=[]
@@ -107,12 +114,12 @@ def Traverse(node,Adj,path,paths,count,NN,flops):
         paths[count[0]].append(node.name)
         count[0]+=1
 
-def pathFinder(Adj, k,NN): 
+def pathFinder(Adj, k,NN,filt): 
     path=[]
     paths={}
     count=[0]
     flops=[0]
     for i in Adj[k]:
-        Traverse(i, Adj,path,paths,count,NN,flops)
-    return flops[0]/1000000000000
+        Traverse(i, Adj,path,paths,count,NN,flops,filt)
+    return flops[0]/1000000000000000 #dividing for teraflops 
 
