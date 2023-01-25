@@ -159,3 +159,11 @@ def addF(op):
         flops=i*flops
     
     return 2*flops 
+
+def GEMMflops(matdem1, matdem2): 
+    #check they can  multiply: 
+    if matdem1[0]!=matdem2[1]:
+        return None
+    
+    else:
+        return 2*matdem1[0]*matdem1[1]*matdem2[1]

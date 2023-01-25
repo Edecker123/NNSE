@@ -18,7 +18,7 @@ import torch.fx
 from torch.fx.node import Node
 import torchvision.models.resnet as res
 from NNparse import targetLook, Node,loadArgs, loadKwargs, parseNet, getOps, oParseMods
-
+from Fcount import GEMMflops
 class jacNode():
     def __init__(self,inp, func):
         self.inp=inp
@@ -26,10 +26,25 @@ class jacNode():
         self.name=[] #max length of 2
         self.child=[]
         self.operation=None
-    
+        self.visited=False
     def addChild(self, child):
         self.child.append(child)
         
+
+def sizeofJac(NN, nodename): 
+    #size of jac is raw outputs by raw inputs 
+    output=NN[nodename[1].name].result
+    size=1
+    for i in output.shape: 
+        size=size*i
+
+    input=NN[nodename[0]].result
+    isize=1
+    for i in input.shape:
+        isize=isize*i
+    
+    return [size,isize]
+    
 
 def genAdjList(NN): #assume that NN is the hashmap gained from parseNet assume it is reversed
     adjL={}
@@ -70,11 +85,20 @@ def dagConnect(Adj,NN):
     return element
 
 
-def Traverse(node,Adj,path,paths,count):
-    path.append(node.name) #add the node to the path
+def Traverse(node,Adj,path,paths,count,NN,flops):
+    dimensions=sizeofJac(NN,node.name)
+    if len(path)>=1:
+        print(dimensions,path[-1])
+        flops[0]+= GEMMflops(path[-1],dimensions)
+        path.append([dimensions[0],path[-1][1]])
+    else: 
+        path.append(dimensions)
+
     if len(node.name)==2: 
         for i in Adj[node.name[1].name]:
-            Traverse(i,Adj,path,paths,count)
+            if i.visited==False:
+                i.visited==True
+                Traverse(i,Adj,path,paths,count,NN,flops)
         path.pop()
     if len(Adj[node.name[1].name])==0:
         paths[count[0]]=[]
@@ -83,10 +107,12 @@ def Traverse(node,Adj,path,paths,count):
         paths[count[0]].append(node.name)
         count[0]+=1
 
-def pathFinder(Adj, k): 
+def pathFinder(Adj, k,NN): 
     path=[]
     paths={}
     count=[0]
+    flops=[0]
     for i in Adj[k]:
-        Traverse(i, Adj,path,paths,count)
-    return paths
+        Traverse(i, Adj,path,paths,count,NN,flops)
+    return flops[0]/1000000000000
+

@@ -22,23 +22,25 @@ import time
 from NNtreegeneration import genAdjList, pathFinder,dagConnect
 
 import torchvision.models.googlenet as goog
+import torchvision.models.alexnet as alex
 m=mlp.MLP()
 v=vgg.vgg19_bn(False)
 g=goog()
-
+a=alex()
 device=torch.device('mps')
-
+r=res.resnet18()
 import torchvision.models.resnet as res
 x=torch.zeros(1,3,224,224)
 
 
-d=parseNet(res.resnet18(),x)
+d=parseNet(r,x)
 
-
+print(r(x).shape)
 p=genAdjList(d)
 k=dagConnect(p,d)
-
-paths=pathFinder(p,k)
-for i in paths: 
-    print(paths[i])
+# for i in p:
+#     for j in p[i]:
+#         print(j.child)
+paths=pathFinder(p,k,d)
+print(paths)
 
