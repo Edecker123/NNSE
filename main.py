@@ -11,7 +11,7 @@ from typing import Dict
 import PyTorch_CIFAR10.cifar10_models.mlp as mlp
 import PyTorch_CIFAR10.cifar10_models.vgg as vgg
 import PyTorch_CIFAR10.cifar10_models.googlenet as goog
-import PyTorch_CIFAR10.cifar10_models.resnet as res
+# import PyTorch_CIFAR10.cifar10_models.resnet as res
 import PyTorch_CIFAR10.cifar10_models.resnet_orig as mog
 
 from NNparse import targetLook, Node,loadArgs, loadKwargs, parseNet, getOps, oParseMods
@@ -20,11 +20,12 @@ import os
 from Fcount import NNSE
 import time
 from NNtreegeneration import genAdjList, pathFinder,dagConnect
-
+import torchvision.models.resnet as res
 import torchvision.models.googlenet as goog
 import torchvision.models.alexnet as alex
+import torchvision.models.vgg as vgg
 m=mlp.MLP()
-v=vgg.vgg19_bn(False)
+v=vgg.vgg19()
 g=goog()
 a=alex()
 device=torch.device('mps')
@@ -33,9 +34,9 @@ import torchvision.models.resnet as res
 x=torch.zeros(1,3,224,224)
 
 
-d=parseNet(g,x)
+d=parseNet(r,x)
 
-print(g(x))
+print(r(x).shape)
 p=genAdjList(d)
 k=dagConnect(p,d)
 # for i in p:
@@ -44,3 +45,4 @@ k=dagConnect(p,d)
 paths=pathFinder(p,k,d,True)
 print(paths , "TFLOPs")
 
+# print(NNSE(r,x)/1000000000, "GFLOPs")
