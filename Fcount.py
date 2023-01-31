@@ -166,4 +166,4 @@ def GEMMflops(matdem1, matdem2):
         return None
     
     else:
-        return matdem1[1]*matdem1[1]*matdem2[1]
+        return matdem2[0]*matdem1[0]

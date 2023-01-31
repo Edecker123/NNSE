@@ -42,7 +42,8 @@ def sizeofJac(NN, nodename):
     isize=1
     for i in input.shape:
         isize=isize*i
-    
+    if NN[nodename[0]].nodeop=='output':
+        isize=1
     return [size,isize]
     
 
@@ -94,7 +95,6 @@ def Traverse(node,Adj,path,paths,count,NN,flops,filt):
         if filt:
             if (NN[node.name[0]].nodeop=="call_module" and NN[node.name[1].name].nodeop=="call_module") or (NN[node.name[1].name].nodeop=="placeholder"):
                 if type(NN[node.name[0]].operation)!=torch.nn.modules.activation.ReLU and type(NN[node.name[1].name].operation)!=torch.nn.modules.activation.ReLU:
-                    print([dimensions[0],path[-1][1]], node.name)
                     flops[0]+= GEMMflops(path[-1],dimensions)
         else:
             if (NN[node.name[0]].nodeop!="call_method" and NN[node.name[1].name].nodeop!="call_method") or (NN[node.name[1].name].nodeop=="placeholder"):
@@ -103,7 +103,7 @@ def Traverse(node,Adj,path,paths,count,NN,flops,filt):
         path.append([dimensions[0],path[-1][1]])
     else: 
         path.append(dimensions)
-
+    print(path[-1])
     if len(node.name)==2: 
         for i in Adj[node.name[1].name]:
             Traverse(i,Adj,path,paths,count,NN,flops,filt)
@@ -122,5 +122,5 @@ def pathFinder(Adj, k,NN,filt):
     flops=[0]
     for i in Adj[k]:
         Traverse(i, Adj,path,paths,count,NN,flops,filt)
-    return paths[0][0]/1000000000000 #dividing for teraflops 
+    return paths[0][0]/1000000000 #dividing for teraflops 
 
