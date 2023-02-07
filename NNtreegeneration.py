@@ -31,7 +31,7 @@ class jacNode():
         self.child.append(child)
         
 
-def sizeofJac(NN, nodename): 
+def sizeofJac(NN, nodename): #jacobian 
     #size of jac is raw outputs by raw inputs 
     output=NN[nodename[1].name].result
     size=1
@@ -44,7 +44,7 @@ def sizeofJac(NN, nodename):
         isize=isize*i
     if NN[nodename[0]].nodeop=='output':
         isize=1
-    return [size,isize]
+    return [size,isize] #represents the [input node to operation size, output node to operationsize]
     
 
 def genAdjList(NN): #assume that NN is the hashmap gained from parseNet assume it is reversed
@@ -89,7 +89,7 @@ def dagConnect(Adj,NN):
     return element
 
 
-def Traverse(node,Adj,path,paths,count,NN,flops,filt):
+def Traverse(node,Adj,path,npath,paths,count,NN,flops,filt):
     dimensions=sizeofJac(NN,node.name)
     if len(path)>=1:
         if filt:
@@ -101,12 +101,15 @@ def Traverse(node,Adj,path,paths,count,NN,flops,filt):
                 
                 flops[0]+= GEMMflops(path[-1],dimensions)
         path.append([dimensions[0],path[-1][1]])
+        npath.append([node.name,npath[-1][0]])
+        # print(node.name[0],node.name[1], NN[node.name[0]].result.shape, NN[node.name[1].name].result.shape)
     else: 
         path.append(dimensions)
-    print(path[-1])
+        npath.append([node.name,None])
+    # print(path[-1])
     if len(node.name)==2: 
         for i in Adj[node.name[1].name]:
-            Traverse(i,Adj,path,paths,count,NN,flops,filt)
+            Traverse(i,Adj,path,npath,paths,count,NN,flops,filt)
         path.pop()
     if len(Adj[node.name[1].name])==0:
         paths[count[0]]=[flops[0]]
@@ -117,10 +120,11 @@ def Traverse(node,Adj,path,paths,count,NN,flops,filt):
 
 def pathFinder(Adj, k,NN,filt): 
     path=[]
+    npath=[]
     paths={}
     count=[0]
     flops=[0]
     for i in Adj[k]:
-        Traverse(i, Adj,path,paths,count,NN,flops,filt)
-    return paths[0][0]/1000000000 #dividing for teraflops 
+        Traverse(i, Adj,path,npath,paths,count,NN,flops,filt)
+    return paths[0][0]/1000000000000#dividing for teraflops 
 

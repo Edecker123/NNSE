@@ -1,25 +1,7 @@
 import torch #first we import the library 
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor,Lambda #first w
-import matplotlib.pyplot as plt 
-import numpy as np 
-import os 
-from torch import nn, softmax 
-import torchvision as models
-import time
-import torch.fx
-from torch.fx.node import Node
-from typing import Dict
-import tabulate
-import torch
-import torch.fx
-from torch.fx.node import Node
-from NNparse import targetLook, Node,loadArgs, loadKwargs, parseNet, getOps
+from NNparse import parseNet
 import PyTorch_CIFAR10.cifar10_models.resnet as res
 import PyTorch_CIFAR10.cifar10_models.inception as inc
-
 
 x=torch.zeros(1,3,128,128)
 i=inc.inception_v3()
@@ -37,7 +19,15 @@ add=k_d['add_1'].operation
 avg3=i_d['avg_pool2d'].operation
 
 count=0
-#op is of type node
+'''
+Icount function: 
+Inputs: node operation from network hashmap data structure
+Functionality: This function takes in a function <assumed to be a node defined above> and will decide which type of operation it is
+once it decides the operation of the node it will call a hardcoded equation to count the flops of the operation which depends on inputs and
+outputs of the operation
+
+'''
+
 def Icount(op):
     
     if type(op.operation) == torch.nn.modules.linear.Linear:
@@ -59,6 +49,15 @@ def Icount(op):
 
     return  0
 
+'''
+Function: NNSE
+
+INPUTS: Neural network object and valid input of the neural network 
+
+Functionality: This function will accept a neural network as an object and then hash out the neural network. 
+After the neural network is hashed out, we linearly loop through the neural network and count the flops of the operation via ICOUNT 
+Finally, we add the flops count to a global variable which we will return in the end
+'''
 def NNSE(nn, x):
     netHash=parseNet(nn,x)
     inferenceflops=0
@@ -68,6 +67,27 @@ def NNSE(nn, x):
         inferenceflops+=flops
     return inferenceflops
     
+'''
+Function: GEMMflops
+Functionality: The functionality of this function is to calculate the flops of a generic matrix multiplication using the formula 
+given in BLAS level 3 documentation. (Note is that I have divided the output of the function by two... might add it back)
+'''
+def GEMMflops(matdem1, matdem2): 
+    
+    #check they can  multiply: 
+    if matdem1[0]!=matdem2[1]:
+        return None
+    
+    else:
+        return matdem2[1]*matdem1[1]*matdem1[0]
+
+
+'''
+Flops counting functions: 
+These functions simply count the flops of the inference operations
+
+DO NOT TOUCH THEM (they have been verified already)
+'''
 def linearF(op):
     size=op.inputs[0].shape
     outputsize=op.result.shape
@@ -160,10 +180,4 @@ def addF(op):
     
     return 2*flops 
 
-def GEMMflops(matdem1, matdem2): 
-    #check they can  multiply: 
-    if matdem1[0]!=matdem2[1]:
-        return None
-    
-    else:
-        return matdem2[0]*matdem1[0]
+

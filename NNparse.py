@@ -18,6 +18,9 @@ import torch.fx
 from torch.fx.node import Node
 import torchvision.models.resnet as res
 
+'''
+Function: fetch_attr: 
+'''
 def fetch_attr(target):
     target_atoms = target.split('.')
     for i, atom in enumerate(target_atoms):
@@ -26,6 +29,12 @@ def fetch_attr(target):
         attr_itr = getattr(attr_itr, atom)
     return attr_itr
 
+
+'''
+Functionality: This function changes a neural network definition into a hashmap of operations 
+The hash map has the composition of {<key=string name> : <value=node class with all parameters filled>}
+The hashmap comes out senquentially ordered in every test but I have not proven that yet
+'''
 def parseNet(net,inp):
     graph={}
     trace=torch.fx.symbolic_trace(net)
@@ -76,6 +85,81 @@ def parseNet(net,inp):
 
     return graph
 
+def targetLook(target, mods):
+    atoms=target.split('.')
+    op=None
+    while len(atoms)!=0:
+        key=atoms.pop(0)
+        inter=mods[key]
+        if len(atoms)!=0:
+            mods=inter._modules
+        else:
+            op=inter
+            return op
+
+def loadArgs(node,graph):
+    #first we grab the args
+    args=node.args
+    argsR=[]
+    #next we look them up 
+    for i in args:
+        if type(i)==torch.fx.node.Node:
+            N=graph[i.name]
+            argsR.append(N.result)
+        elif type(i)==torch.fx.immutable_collections.immutable_list:
+            a=[]
+            for j in i:
+                if type(j)==torch.fx.node.Node:
+                    a.append(graph[j.name].result)
+            argsR.append(a)
+        else:
+            argsR.append(i)
+    return tuple(argsR)
+
+def loadKwargs(node, graph):
+    #first we grab the args
+    kwargs=node.kwargs
+    kwargsR=[]
+    #next we look them up 
+    for i in kwargs:
+        if type(i)==torch.fx.node.Node:
+            N=graph[i.name]
+            kwargsR.append(N.result)
+        elif type(i)==torch.fx.immutable_collections.immutable_list:
+            a=[]
+            for j in i:
+                if type(j)==torch.fx.node.Node:
+                    a.append(graph[j.name].result)
+            kwargsR.append(a)
+        elif type(i)==str:
+            kwargsR.append(kwargs[i])
+        else:
+            kwargsR.append(i)
+    return tuple(kwargsR)
+class Node():
+    def __init__(self, inputs, name, operation,result,nodeop, kwargs, prev,argnodes=None):
+        self.operation=operation
+        self.inputs=inputs
+        self.result=result
+        self.name=name
+        self.nodeop=nodeop
+        self.kwargs=kwargs
+        self.prev=prev
+        self.argnodes=argnodes
+        
+def getOps(netGraph):
+    op={}
+    for i in netGraph:
+        if netGraph[i].operation in op:
+            op[netGraph[i].operation]+=1
+        else:
+            op[netGraph[i].operation]=1
+    return op
+
+
+'''
+Misc functions below that aren't used in codebase
+'''
 #parses the forward pass into a neural network, see parseNetworkB for the parsing of operations in the backpass
 def parseNetMods(m):
     opHash={}
@@ -153,73 +237,4 @@ def oParseMods(net):
             count+=1
     return oParse
 
-def targetLook(target, mods):
-    atoms=target.split('.')
-    op=None
-    while len(atoms)!=0:
-        key=atoms.pop(0)
-        inter=mods[key]
-        if len(atoms)!=0:
-            mods=inter._modules
-        else:
-            op=inter
-            return op
-
-def loadArgs(node,graph):
-    #first we grab the args
-    args=node.args
-    argsR=[]
-    #next we look them up 
-    for i in args:
-        if type(i)==torch.fx.node.Node:
-            N=graph[i.name]
-            argsR.append(N.result)
-        elif type(i)==torch.fx.immutable_collections.immutable_list:
-            a=[]
-            for j in i:
-                if type(j)==torch.fx.node.Node:
-                    a.append(graph[j.name].result)
-            argsR.append(a)
-        else:
-            argsR.append(i)
-    return tuple(argsR)
-
-def loadKwargs(node, graph):
-    #first we grab the args
-    kwargs=node.kwargs
-    kwargsR=[]
-    #next we look them up 
-    for i in kwargs:
-        if type(i)==torch.fx.node.Node:
-            N=graph[i.name]
-            kwargsR.append(N.result)
-        elif type(i)==torch.fx.immutable_collections.immutable_list:
-            a=[]
-            for j in i:
-                if type(j)==torch.fx.node.Node:
-                    a.append(graph[j.name].result)
-            kwargsR.append(a)
-        elif type(i)==str:
-            kwargsR.append(kwargs[i])
-        else:
-            kwargsR.append(i)
-    return tuple(kwargsR)
-class Node():
-    def __init__(self, inputs, name, operation,result,nodeop, kwargs, prev,argnodes=None):
-        self.operation=operation
-        self.inputs=inputs
-        self.result=result
-        self.name=name
-        self.nodeop=nodeop
-        self.kwargs=kwargs
-        self.prev=prev
-        self.argnodes=argnodes
-def getOps(netGraph):
-    op={}
-    for i in netGraph:
-        if netGraph[i].operation in op:
-            op[netGraph[i].operation]+=1
-        else:
-            op[netGraph[i].operation]=1
-    return op
 
