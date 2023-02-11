@@ -19,14 +19,15 @@ import torchvision.models.vgg as vgg
 import torchvision.models.resnet as res
 from testsuite import convse,getGraphModule
 mlpNetwork=mlp.MLP()
-vgg11=vgg.vgg11()
+vgg11=vgg.vgg11_bn()
 googleNet=goog()
 alexNet=alex()
 resNet18=res.resnet18()
 #instantiation for code testing data
 device=torch.device('mps')
+# x=torch.zeros(1,1,784)
 x=torch.zeros(1,3,224,224)
-d=parseNet(alexNet,x)
+d=parseNet(resNet18,x)
 
 graoh=getGraphModule(googleNet)
 
@@ -36,8 +37,8 @@ k=dagConnect(p,d)
 # for i in p:
 #     for j in p[i]:
 #         print(j.child)
-paths=pathFinder(p,k,d,True)
-print(paths*1000 , "GFLOPs")
+paths=pathFinder(p,k,d,False)
+print(paths*10 , "GFLOPs")
 
 # # print(NNSE(r,x)/1000000000, "GFLOPs")
 convs=[]
@@ -55,4 +56,12 @@ for i in d:
 flop=convse(convs)
 
 # print(flop/1000000000 ,"GFLOPs for only convs assuming triangular matrix")
-print(NNSE(alexNet,x)/1000000000 , "GFLOPs")
+print(NNSE(mlpNetwork,x)/1000000000 , "GFLOPs")
+count=0
+mat1=torch.rand(1,25000)
+mat2=torch.rand(25000,000)
+for i in range(0, 1000):
+    while count<50: 
+        torch.matmul(mat1,mat2)
+        count+=1
+    count=0
