@@ -26,7 +26,7 @@ resNet18=res.resnet18()
 #instantiation for code testing data
 device=torch.device('mps')
 x=torch.zeros(1,3,224,224)
-d=parseNet(vgg11,x)
+d=parseNet(alexNet,x)
 
 graoh=getGraphModule(googleNet)
 
@@ -37,7 +37,7 @@ k=dagConnect(p,d)
 #     for j in p[i]:
 #         print(j.child)
 paths=pathFinder(p,k,d,True)
-print(paths , "GFLOPs")
+print(paths*1000 , "GFLOPs")
 
 # # print(NNSE(r,x)/1000000000, "GFLOPs")
 convs=[]
@@ -55,4 +55,4 @@ for i in d:
 flop=convse(convs)
 
 # print(flop/1000000000 ,"GFLOPs for only convs assuming triangular matrix")
-# print(NNSE(resNet18,x)/1000000000 , "GFLOPs")
+print(NNSE(alexNet,x)/1000000000 , "GFLOPs")
