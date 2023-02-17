@@ -16,9 +16,15 @@ import tabulate
 import torch
 import torch.fx
 from torch.fx.node import Node
+import torchvision
 import torchvision.models.resnet as res
 from NNparse import targetLook, Node,loadArgs, loadKwargs, parseNet, getOps, oParseMods
 from Fcount import GEMMflops
+import torchvision.models.googlenet as goog
+googleNet=goog()
+tensor=torch.zeros(1,3,224,224)
+outputgoog=googleNet(tensor)
+
 class jacNode():
     def __init__(self,inp, func):
         self.inp=inp
@@ -31,10 +37,12 @@ class jacNode():
         self.child.append(child)
         
 
-def sizeofJac(NN, nodename): 
+def sizeofJac(NN, nodename): #jacobian 
     #size of jac is raw outputs by raw inputs 
     output=NN[nodename[1].name].result
+    
     size=1
+
     for i in output.shape: 
         size=size*i
 
@@ -42,24 +50,29 @@ def sizeofJac(NN, nodename):
     isize=1
     for i in input.shape:
         isize=isize*i
-    
-    return [size,isize]
+    return [size,isize] #represents the [input node to operation size, output node to operationsize]
     
 
 def genAdjList(NN): #assume that NN is the hashmap gained from parseNet assume it is reversed
     adjL={}
     for vertex in NN: 
+
         if vertex in adjL:
             continue
         else: 
-            if type(NN[vertex].result)==int:
+            if type(NN[vertex].result)!=type(tensor):
+                if type(NN[vertex].result) == type(outputgoog): 
+                    NN[vertex].result==NN[vertex].result.logits
                 continue
             adjL[vertex]=[]
             for parentv in NN[vertex].argnodes:
                 try:
                     if parentv.name in NN:
-                        if type(NN[parentv.name].result)!=int:
+                        if type(NN[parentv.name].result)==type(tensor):
                             adjL[vertex].append(parentv)
+                        else: 
+                            if type(NN[vertex].result) == type(outputgoog): 
+                                NN[vertex].result==NN[vertex].result.logits
                 except:
                     continue
                 
@@ -88,25 +101,29 @@ def dagConnect(Adj,NN):
     return element
 
 
-def Traverse(node,Adj,path,paths,count,NN,flops,filt):
+def Traverse(node,Adj,path,npath,paths,count,NN,flops,filt):
     dimensions=sizeofJac(NN,node.name)
     if len(path)>=1:
         if filt:
-            if (NN[node.name[0]].nodeop=="call_module" and NN[node.name[1].name].nodeop=="call_module") or (NN[node.name[1].name].nodeop=="placeholder"):
-                if type(NN[node.name[0]].operation)!=torch.nn.modules.activation.ReLU and type(NN[node.name[1].name].operation)!=torch.nn.modules.activation.ReLU:
-                    print([dimensions[0],path[-1][1]], node.name)
-                    flops[0]+= GEMMflops(path[-1],dimensions)
+        
+            if type(NN[node.name[0]].operation)==torch.nn.modules.conv.Conv2d:
+                flops[0]+= GEMMflops(path[-1],dimensions)
+                print(node.name[0],node.name[1], NN[node.name[0]].result.shape, NN[node.name[1].name].result.shape)
         else:
             if (NN[node.name[0]].nodeop!="call_method" and NN[node.name[1].name].nodeop!="call_method") or (NN[node.name[1].name].nodeop=="placeholder"):
                 
                 flops[0]+= GEMMflops(path[-1],dimensions)
+                print(node.name[0],node.name[1], NN[node.name[0]].result.shape, NN[node.name[1].name].result.shape)
         path.append([dimensions[0],path[-1][1]])
+        npath.append([node.name,npath[-1][0],dimensions])
+        
     else: 
         path.append(dimensions)
-
+        npath.append([node.name,None])
+    # print(path[-1])
     if len(node.name)==2: 
         for i in Adj[node.name[1].name]:
-            Traverse(i,Adj,path,paths,count,NN,flops,filt)
+            Traverse(i,Adj,path,npath,paths,count,NN,flops,filt)
         path.pop()
     if len(Adj[node.name[1].name])==0:
         paths[count[0]]=[flops[0]]
@@ -117,10 +134,11 @@ def Traverse(node,Adj,path,paths,count,NN,flops,filt):
 
 def pathFinder(Adj, k,NN,filt): 
     path=[]
+    npath=[]
     paths={}
     count=[0]
     flops=[0]
     for i in Adj[k]:
-        Traverse(i, Adj,path,paths,count,NN,flops,filt)
-    return paths[0][0]/1000000000000 #dividing for teraflops 
+        Traverse(i, Adj,path,npath,paths,count,NN,flops,filt)
+    return paths[0][0]/1000000000000#dividing for teraflops 
 
