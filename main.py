@@ -25,11 +25,14 @@ alexNet=alex()
 resNet18=res.resnet18()
 #instantiation for code testing data
 device=torch.device('mps')
-# x=torch.zeros(1,1,784)
-x=torch.zeros(1,3,224,224)
-d=parseNet(resNet18,x)
+x=torch.zeros(1,1,784)
+# x=torch.zeros(1,3,224,224)
+net=mlpNetwork
+d=parseNet(net,x)
+# out=googleNet(x)
+sizenet=1
 
-graoh=getGraphModule(googleNet)
+
 
 
 p=genAdjList(d)
@@ -38,9 +41,9 @@ k=dagConnect(p,d)
 #     for j in p[i]:
 #         print(j.child)
 paths=pathFinder(p,k,d,False)
-print(paths*10 , "GFLOPs")
+print(paths , "TFLOPs")
 
-# # print(NNSE(r,x)/1000000000, "GFLOPs")
+print(NNSE(net,x)/1000000000, "GFLOPs")
 convs=[]
 for i in d: 
     if type(d[i].operation) == torch.nn.modules.conv.Conv2d:

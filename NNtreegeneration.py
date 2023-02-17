@@ -16,9 +16,15 @@ import tabulate
 import torch
 import torch.fx
 from torch.fx.node import Node
+import torchvision
 import torchvision.models.resnet as res
 from NNparse import targetLook, Node,loadArgs, loadKwargs, parseNet, getOps, oParseMods
 from Fcount import GEMMflops
+import torchvision.models.googlenet as goog
+googleNet=goog()
+tensor=torch.zeros(1,3,224,224)
+outputgoog=googleNet(tensor)
+
 class jacNode():
     def __init__(self,inp, func):
         self.inp=inp
@@ -34,7 +40,9 @@ class jacNode():
 def sizeofJac(NN, nodename): #jacobian 
     #size of jac is raw outputs by raw inputs 
     output=NN[nodename[1].name].result
+    
     size=1
+
     for i in output.shape: 
         size=size*i
 
@@ -42,25 +50,29 @@ def sizeofJac(NN, nodename): #jacobian
     isize=1
     for i in input.shape:
         isize=isize*i
-    if NN[nodename[0]].nodeop=='output':
-        isize=1
     return [size,isize] #represents the [input node to operation size, output node to operationsize]
     
 
 def genAdjList(NN): #assume that NN is the hashmap gained from parseNet assume it is reversed
     adjL={}
     for vertex in NN: 
+
         if vertex in adjL:
             continue
         else: 
-            if type(NN[vertex].result)==int:
+            if type(NN[vertex].result)!=type(tensor):
+                if type(NN[vertex].result) == type(outputgoog): 
+                    NN[vertex].result==NN[vertex].result.logits
                 continue
             adjL[vertex]=[]
             for parentv in NN[vertex].argnodes:
                 try:
                     if parentv.name in NN:
-                        if type(NN[parentv.name].result)!=int:
+                        if type(NN[parentv.name].result)==type(tensor):
                             adjL[vertex].append(parentv)
+                        else: 
+                            if type(NN[vertex].result) == type(outputgoog): 
+                                NN[vertex].result==NN[vertex].result.logits
                 except:
                     continue
                 
@@ -96,13 +108,15 @@ def Traverse(node,Adj,path,npath,paths,count,NN,flops,filt):
         
             if type(NN[node.name[0]].operation)==torch.nn.modules.conv.Conv2d:
                 flops[0]+= GEMMflops(path[-1],dimensions)
+                print(node.name[0],node.name[1], NN[node.name[0]].result.shape, NN[node.name[1].name].result.shape)
         else:
             if (NN[node.name[0]].nodeop!="call_method" and NN[node.name[1].name].nodeop!="call_method") or (NN[node.name[1].name].nodeop=="placeholder"):
                 
                 flops[0]+= GEMMflops(path[-1],dimensions)
+                print(node.name[0],node.name[1], NN[node.name[0]].result.shape, NN[node.name[1].name].result.shape)
         path.append([dimensions[0],path[-1][1]])
-        npath.append([node.name,npath[-1][0]])
-        # print(node.name[0],node.name[1], NN[node.name[0]].result.shape, NN[node.name[1].name].result.shape)
+        npath.append([node.name,npath[-1][0],dimensions])
+        
     else: 
         path.append(dimensions)
         npath.append([node.name,None])
