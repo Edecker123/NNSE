@@ -22,7 +22,7 @@ mlpNetwork=mlp.MLP()
 vgg11=vgg.vgg11_bn()
 googleNet=goog()
 alexNet=alex()
-resNet18=res.resnet18()
+resNet18=res.resnet34()
 #instantiation for code testing data
 device=torch.device('mps')
 # x=torch.zeros(1,1,784)
@@ -31,7 +31,7 @@ net=alexNet
 d=parseNet(vgg11,x)
 # out=googleNet(x)
 sizenet=1
-
+    
 
 
 
@@ -41,7 +41,7 @@ k=dagConnect(p,d)
 #     for j in p[i]:
 #         print(j.child)
 paths=pathFinder(p,k,d,True)
-print(paths , "TFLOPs")
+print(paths*1000 , "TFLOPs")
 
 print(NNSE(net,x)/1000000000, "GFLOPs")
 convs=[]

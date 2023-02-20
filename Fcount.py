@@ -2,7 +2,7 @@ import torch #first we import the library
 from NNparse import parseNet
 import PyTorch_CIFAR10.cifar10_models.resnet as res
 import PyTorch_CIFAR10.cifar10_models.inception as inc
-
+import math
 x=torch.zeros(1,3,128,128)
 i=inc.inception_v3()
 res=res.resnet18()
@@ -79,7 +79,7 @@ def GEMMflops(matdem1, matdem2):
         return None
     
     else:
-        return matdem2[1]*matdem1[1]*matdem1[0]
+        return matdem2[1]*matdem1[1]*matdem1[0]/(math.log(matdem2[1])*math.log(matdem2[1]))
 
 
 '''

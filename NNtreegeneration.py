@@ -40,9 +40,7 @@ class jacNode():
 def sizeofJac(NN, nodename): #jacobian 
     #size of jac is raw outputs by raw inputs 
     output=NN[nodename[1].name].result
-    
     size=1
-
     for i in output.shape: 
         size=size*i
 
@@ -50,9 +48,10 @@ def sizeofJac(NN, nodename): #jacobian
     isize=1
     for i in input.shape:
         isize=isize*i
+    if NN[nodename[0]].nodeop=='output':
+        isize=1
     return [size,isize] #represents the [input node to operation size, output node to operationsize]
     
-
 def genAdjList(NN): #assume that NN is the hashmap gained from parseNet assume it is reversed
     adjL={}
     for vertex in NN: 
@@ -108,6 +107,7 @@ def Traverse(node,Adj,path,npath,paths,count,NN,flops,filt):
         
             if type(NN[node.name[0]].operation)==torch.nn.modules.conv.Conv2d:
                 flops[0]+= GEMMflops(path[-1],dimensions)
+                print(path[-1],dimensions)
                 print(node.name[0],node.name[1], NN[node.name[0]].result.shape, NN[node.name[1].name].result.shape)
         else:
             if (NN[node.name[0]].nodeop!="call_method" and NN[node.name[1].name].nodeop!="call_method") or (NN[node.name[1].name].nodeop=="placeholder"):
